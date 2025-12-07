@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -12,19 +13,75 @@
 
   <div class="paper-stone rounded-xl p-6 max-w-md mx-auto mt-8">
 
-    <h1 class="hand-font text-3xl burned-text">Settings</h1>
+```
+<h1 class="hand-font text-3xl burned-text">Settings</h1>
 
-    <p class="text-white mt-2">
-      Adjust your app preferences.
-    </p>
+<p class="text-white mt-2">
+  Adjust your app preferences.
+</p>
 
-    <div class="mt-4 text-white hand-font">
-      <p><strong>Theme:</strong> (coming soon)</p>
-      <p><strong>Units:</strong> (coming soon)</p>
-      <p><strong>Notifications:</strong> (coming soon)</p>
-    </div>
+<div class="mt-4 text-white hand-font">
+  <p><strong>Theme:</strong> (coming soon)</p>
+  <p><strong>Units:</strong> (coming soon)</p>
+  <p><strong>Notifications:</strong> (coming soon)</p>
+</div>
+```
 
   </div>
+
+  <!-- 🔥 USDA API KEY BLOCK -->
+
+  <div class="paper-stone rounded-xl p-6 max-w-md mx-auto mt-8">
+
+```
+<h2 class="hand-font text-2xl burned-text">USDA API Key</h2>
+
+<input id="usdaKeyInput" placeholder="Enter your USDA API key"
+  class="mt-4 p-2 rounded w-full hand-font" />
+
+<button onclick="saveKey()" class="mt-4 bg-white px-4 py-2 rounded shadow hand-font">
+  Save Key
+</button>
+
+<button onclick="testKey()" class="mt-4 bg-white px-4 py-2 rounded shadow hand-font">
+  Test Key with 'apple'
+</button>
+
+<p id="keyStatus" class="text-white mt-4 hand-font"></p>
+```
+
+  </div>
+
+  <script>
+    function saveKey() {
+      const key = document.getElementById('usdaKeyInput').value;
+      localStorage.setItem('dojo_api_key', key);
+      document.getElementById('keyStatus').textContent = 'Saved!';
+    }
+
+    async function testKey() {
+      const key = localStorage.getItem('dojo_api_key');
+      if (!key) {
+        document.getElementById('keyStatus').textContent = 'No key saved yet.';
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          "https://api.api-ninjas.com/v1/nutrition?query=apple",
+          { headers: { "X-Api-Key": key } }
+        );
+
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        document.getElementById('keyStatus').textContent =
+          'Success! Apple calories per 100g: ' + data[0].calories;
+
+      } catch (e) {
+        document.getElementById('keyStatus').textContent = 'Invalid key or API error.';
+      }
+    }
+  </script>
 
   <div style="text-align:center;margin-top:20px;">
     <a href="index.html">Search</a> |
@@ -36,4 +93,3 @@
 
 </body>
 </html>
-
