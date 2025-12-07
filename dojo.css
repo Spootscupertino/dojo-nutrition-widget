@@ -1,1 +1,52 @@
+/* Typography overrides */
+        body { font-family: 'Noto Serif', serif; }
+        .dojo-font { font-family: 'Cinzel', serif; }
+        .hand-font { font-family: 'Caveat', cursive; }
+        
+        /* Background: Dark Dojo Room */
+        .dojo-bg {
+            /* Ensure your background file is named 'bg-dojo.jpg' in the same folder */
+            background-image: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%), url('bg-dojo.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
 
+        /* Widget Container: Paper Mache Stone */
+        .paper-stone {
+            /* Ensure your texture file is named 'sdcpapermache.jpg' in the same folder */
+            background-image: url('sdcpapermache.jpg');
+            background-size: cover;
+            background-position: center;
+            /* Soft, organic shadow to lift it off the floor */
+            box-shadow: 
+                0 20px 50px -12px rgba(0, 0, 0, 0.5), 
+                inset 0 0 40px rgba(0,0,0,0.05);
+        }
+
+        /* The "Burned" Text Effect */
+        .burned-text {
+            color: #3e2723; /* Dark peat brown */
+            opacity: 0.85;
+            mix-blend-mode: multiply; 
+            text-shadow: 0px 1px 0px rgba(255,255,255,0.4); 
+        }
+        
+        /* Input Styles: Fluid Pills */
+        .fluid-input {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(62, 39, 35, 0.1);
+            backdrop-filter: blur(4px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .fluid-input:focus-within {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(62, 39, 35, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Custom Scrollbar for results list */
+        .results-list::-webkit-scrollbar { width: 6px; }
+        .results-list::-webkit-scrollbar-track { background: transparent; }
+        .results-list::-webkit-scrollbar-thumb { background-color: #d7ccc8; border-radius: 20px; }
