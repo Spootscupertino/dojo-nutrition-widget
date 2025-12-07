@@ -6,6 +6,7 @@
   <title>Pantry Item</title>
 
   <link rel="stylesheet" href="dojo.css" />
+  <script src="logic.js"></script>
 </head>
 
 <body class="dojo-bg">
@@ -17,6 +18,7 @@
     </h1>
 
     <div id="details" class="mt-3 text-white"></div>
+    <div id="nutrition" class="mt-4 text-white"></div>
 
     <button id="deleteBtn"
       class="mt-4 bg-red-600 text-white px-4 py-2 rounded shadow block mx-auto">
@@ -51,10 +53,11 @@
       return getPantry().find(i => i.id === getId());
     }
 
-    function render() {
+    async function render() {
       const item = getItem();
       const nameEl = document.getElementById("itemName");
       const detailsEl = document.getElementById("details");
+      const nutritionEl = document.getElementById("nutrition");
 
       if (!item) {
         nameEl.textContent = "Item Not Found";
@@ -66,6 +69,35 @@
         <p>Amount: ${item.amount}</p>
         <p>Unit: ${item.unit}</p>
       `;
+
+      nutritionEl.textContent = "Loading nutrition...";
+      try {
+        const data = await fetchNutrition(item.name);
+        if (!data || data.error) {
+          nutritionEl.textContent = data?.error || "No nutrition data available.";
+          return;
+        }
+
+        const grams = toGrams(item.amount, item.unit);
+        const scaled = scaleNutrition(data, grams);
+        if (!scaled) {
+          nutritionEl.textContent = "Unable to scale nutrition.";
+          return;
+        }
+
+        nutritionEl.innerHTML = `
+          <div class="bg-white text-black p-4 rounded">
+            <p><strong>${item.name}</strong></p>
+            <p>Calories: ${scaled.calories.toFixed(1)}</p>
+            <p>Protein: ${scaled.protein_g.toFixed(1)} g</p>
+            <p>Carbs: ${scaled.carbohydrates_total_g.toFixed(1)} g</p>
+            <p>Fat: ${scaled.fat_total_g.toFixed(1)} g</p>
+          </div>
+        `;
+      } catch (err) {
+        console.error("Nutrition load failed", err);
+        nutritionEl.textContent = "Failed to load nutrition.";
+      }
     }
 
     function removeItem() {

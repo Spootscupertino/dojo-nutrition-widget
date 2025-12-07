@@ -10,6 +10,17 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="dojo.css">
 
+<script>
+// Lightweight cache-bust so back/forward always lands on the latest build of index.html
+const APP_VERSION = "2025-12-07-1";
+const params = new URLSearchParams(window.location.search);
+if (params.get("v") !== APP_VERSION) {
+  params.set("v", APP_VERSION);
+  const url = `${window.location.pathname}?${params.toString()}`;
+  window.location.replace(url);
+}
+</script>
+
 <style>
 body { font-family: sans-serif; }
 </style>
@@ -50,6 +61,16 @@ class="fluid-input rounded p-3 w-1/2" />
 
 <!-- Output -->
 <div id="nutrition" class="mt-8 text-lg"></div>
+<div id="actions" class="mt-4 space-x-2 hidden">
+  <button id="addPantryBtn" class="bg-white text-black px-3 py-2 rounded shadow">Add to Pantry</button>
+  <button id="addDishBtn" class="bg-white text-black px-3 py-2 rounded shadow">Add to Dish</button>
+  <div id="dishPicker" class="mt-2 hidden">
+    <label class="text-white text-sm">Choose dish</label>
+    <select id="dishSelect" class="w-full p-2 rounded text-black max-h-40 overflow-y-auto">
+      <option value="">Select a dish...</option>
+    </select>
+  </div>
+</div>
 </div>
 
 <div style="text-align:center;margin-top:20px;">
@@ -79,6 +100,11 @@ const unit = document.getElementById("unit");
 const out = document.getElementById("nutrition");
 const errorMsg = document.getElementById("errorMsg");
 const ghost = document.getElementById("ghostSuggestion");
+const actions = document.getElementById("actions");
+const addPantryBtn = document.getElementById("addPantryBtn");
+const addDishBtn = document.getElementById("addDishBtn");
+const dishPicker = document.getElementById("dishPicker");
+const dishSelect = document.getElementById("dishSelect");
 
 let selectedFood = null;
 let selectedNutrition = null;
@@ -192,6 +218,75 @@ function selectFood(name, nutrition){
   render();
 }
 
+// Pantry/Dish storage helpers
+function getPantry() {
+  const stored = localStorage.getItem("dojo_pantry");
+  return stored ? JSON.parse(stored) : [];
+}
+function savePantry(list) {
+  localStorage.setItem("dojo_pantry", JSON.stringify(list));
+}
+function getDishes() {
+  const stored = localStorage.getItem("dojo_dishes");
+  if (!stored) return [];
+  try { return JSON.parse(stored); } catch { return []; }
+}
+function saveDishes(list) {
+  localStorage.setItem("dojo_dishes", JSON.stringify(list));
+}
+
+function refreshDishDropdown() {
+  if (!dishSelect || !dishPicker) return;
+  const dishes = getDishes();
+  if (!dishes.length) {
+    dishPicker.classList.add("hidden");
+    dishSelect.innerHTML = `<option value="">No dishes yet</option>`;
+    return;
+  }
+  dishPicker.classList.remove("hidden");
+  const options = ["<option value=''>Select a dish...</option>",
+    ...dishes.map(d => `<option value="${d.id}">${d.name || d.id}</option>`)];
+  dishSelect.innerHTML = options.join("");
+}
+
+function addToPantry() {
+  if (!selectedFood || !selectedNutrition) return;
+  const amt = amount.value?.trim() || "1";
+  const u = unit.value || "g";
+  const list = getPantry();
+  list.push({ id: Date.now().toString(), name: selectedFood, amount: amt, unit: u });
+  savePantry(list);
+  showError(`${selectedFood} added to pantry`);
+  errorMsg.style.color = "#10b981"; // green
+}
+
+function addToDish() {
+  if (!selectedFood || !selectedNutrition) return;
+  const dishes = getDishes();
+  if (!dishes.length) {
+    showError("Create a dish first on the Dish page.");
+    errorMsg.style.color = "#f87171"; // red
+    return;
+  }
+
+  const targetId = dishSelect?.value;
+  const target = dishes.find(d => d.id === targetId) || null;
+  if (!target) {
+    showError("Pick a dish from the dropdown.");
+    errorMsg.style.color = "#f87171";
+    return;
+  }
+
+  const amt = amount.value?.trim() || "1";
+  const u = unit.value || "g";
+
+  target.ingredients = target.ingredients || [];
+  target.ingredients.push({ name: selectedFood, amount: amt, unit: u });
+  saveDishes(dishes.map(d => d.id === target.id ? target : d));
+  showError(`${selectedFood} added to ${target.name || "dish"}`);
+  errorMsg.style.color = "#10b981"; // green
+}
+
 // Compute and display
 function render(){
   if(!selectedNutrition) return;
@@ -213,6 +308,8 @@ function render(){
     <p>Carbs: ${scaled.carbohydrates_total_g.toFixed(1)} g</p>
     <p>Fat: ${scaled.fat_total_g.toFixed(1)} g</p>
     </div>`;
+    if (actions) actions.classList.remove("hidden");
+    refreshDishDropdown();
     
   } catch(err) {
     console.error("Render error:", err);
@@ -223,6 +320,10 @@ function render(){
 // Update on change
 amount.oninput = render;
 unit.onchange = render;
+
+if (addPantryBtn) addPantryBtn.addEventListener("click", addToPantry);
+if (addDishBtn) addDishBtn.addEventListener("click", addToDish);
+if (dishSelect) dishSelect.addEventListener("change", clearError);
 </script>
 
 </body>

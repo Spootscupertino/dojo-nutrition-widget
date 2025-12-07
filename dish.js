@@ -7,7 +7,14 @@ const DISHES_KEY = "dojo_dishes";
 
 function getDishes() {
   const stored = localStorage.getItem(DISHES_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch (err) {
+    console.warn("Corrupt dishes data, resetting", err);
+    localStorage.removeItem(DISHES_KEY);
+    return [];
+  }
 }
 
 function saveDishes(list) {
@@ -38,29 +45,53 @@ function renderList() {
       container.appendChild(div);
     });
   }
-
-  const addBtn = document.createElement("button");
-  addBtn.className =
-    "mt-4 bg-white px-4 py-2 rounded shadow hand-font block mx-auto";
-  addBtn.textContent = "➕ Create Dish";
-
-  addBtn.addEventListener("click", () => {
-    const name = prompt("Name this new dish:");
-    if (!name) return;
-
-    const id = Date.now().toString();
-
-    const list = getDishes();
-    list.push({ id, name, ingredients: [] });
-    saveDishes(list);
-    renderList();
-  });
-
-  container.appendChild(addBtn);
 }
 
 // Auto render
 document.addEventListener("DOMContentLoaded", () => {
+  const createBtn = document.getElementById("createDishBtn");
+  const nameInput = document.getElementById("newDishName");
+  const err = document.getElementById("dishError");
+
+  function setError(msg) {
+    if (!err) return;
+    if (!msg) {
+      err.classList.add("hidden");
+      err.textContent = "";
+    } else {
+      err.classList.remove("hidden");
+      err.textContent = msg;
+    }
+  }
+
+  function createDish() {
+    const name = nameInput?.value.trim();
+    if (!name) {
+      setError("Please enter a recipe name.");
+      return;
+    }
+    const list = getDishes();
+    if (list.some(d => (d.name || "").toLowerCase() === name.toLowerCase())) {
+      setError("A dish with that name already exists.");
+      return;
+    }
+
+    const id = Date.now().toString();
+    list.push({ id, name, ingredients: [] });
+    saveDishes(list);
+    if (nameInput) nameInput.value = "";
+    setError("");
+    renderList();
+  }
+
+  if (createBtn) createBtn.addEventListener("click", createDish);
+  if (nameInput) nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      createDish();
+    }
+  });
+
   renderList();
 });
 
