@@ -2,45 +2,19 @@
 // Dojo Global Logic
 // -----------------------------
 
-// Offline dataset loader
-let OFFLINE_CACHE = (typeof OFFLINE_NUTRITION !== "undefined" && Array.isArray(OFFLINE_NUTRITION))
-  ? OFFLINE_NUTRITION
-  : null;
+// nutrition endpoint
+const API_URL = "https://api.api-ninjas.com/v1/nutrition?query=";
 
-async function ensureOfflineData() {
-  if (OFFLINE_CACHE) return OFFLINE_CACHE;
-  if (typeof OFFLINE_NUTRITION !== "undefined" && Array.isArray(OFFLINE_NUTRITION)) {
-    OFFLINE_CACHE = OFFLINE_NUTRITION;
-    return OFFLINE_CACHE;
-  }
-  try {
-    const res = await fetch("data/offline_nutrition.json");
-    if (res.ok) {
-      OFFLINE_CACHE = await res.json();
-      return OFFLINE_CACHE;
-    }
-  } catch {}
-  OFFLINE_CACHE = [];
-  return OFFLINE_CACHE;
-}
+// 🔥 hard-coded API KEY
+const API_KEY = "4UJbz31NSzJfjYDaoZrQoA==3TxTMrMleysCSEAp";
 
-function findOfflineFood(query, data) {
-  if (!query || !Array.isArray(data)) return null;
-  const q = query.toLowerCase();
-  const exact = data.find(f => f.name.toLowerCase() === q);
-  if (exact) return exact;
-  return data.find(f => f.name.toLowerCase().includes(q)) || null;
-}
-
-// Fetch nutrition data (offline)
+// -----------------------------
+// FETCH NUTRITION
+// -----------------------------
 async function fetchNutrition(query) {
-  const data = await ensureOfflineData();
-  const match = findOfflineFood(query, data);
-  if (!match) {
-    return { error: 'No matching food found offline' };
-  }
-  return match;
-}
+  const res = await fetch(API_URL + encodeURIComponent(query), {
+    headers: { "X-Api-Key": API_KEY },
+  });
 
 // Lightweight search using offline dataset
 async function searchFoods(query, limit = 6) {
@@ -53,11 +27,11 @@ async function searchFoods(query, limit = 6) {
 }
 
 // -----------------------------
-// UNIT CONVERSION
+// CONVERT UNITS TO GRAMS
 // -----------------------------
-
-// g = exact, oz/lb approximate, cups/tbsp vary by ingredient.
-// We default approximate but allow overrides later.
+// g exact
+// oz/lb approximate
+// cup/tbsp/tsp vary by ingredient
 function toGrams(amount, unit) {
   const n = parseFloat(amount);
 
@@ -68,14 +42,12 @@ function toGrams(amount, unit) {
     case "cup": return n * 240;   // generic density
     case "tbsp": return n * 15;
     case "tsp": return n * 5;
-    default: return n; // assume already grams
+    default: return n;
   }
 }
 
 // -----------------------------
-// MACRO SCALING
-// nutrition API returns values per 100g
-// we scale using grams
+// SCALE PER 100G → YOUR AMOUNT
 // -----------------------------
 function scaleNutrition(nutrition, grams) {
   if (!nutrition) return null;
@@ -87,6 +59,16 @@ function scaleNutrition(nutrition, grams) {
     protein_g: (nutrition.protein_g || 0) * factor,
     carbohydrates_total_g: (nutrition.carbohydrates_total_g || 0) * factor,
     fat_total_g: (nutrition.fat_total_g || 0) * factor,
+    calories:  (nutrition.calories  * factor).toFixed(1),
+    protein:   (nutrition.protein   * factor).toFixed(1),
+    carbs:     (nutrition.carbohydrates_total_g * factor).toFixed(1),
+    fat:       (nutrition.fat_total_g * factor).toFixed(1),
   };
 }
 
+// export for other pages
+window.DojoNutrition = {
+  fetchNutrition,
+  toGrams,
+  scaleNutrition,
+};
