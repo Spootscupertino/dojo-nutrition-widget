@@ -53,5 +53,10 @@ function scaleNutrition(nutrition, grams) {
   const factor = grams / 100;
 
   return {
-    calories: (nutrition.c
+    calories: (nutrition.calories * factor).toFixed(1),
+    protein: (nutrition.protein_g * factor).toFixed(1),
+    carbs: (nutrition.carbohydrates_total_g * factor).toFixed(1),
+    fat: (nutrition.fat_total_g * factor).toFixed(1)
+  };
+}
 

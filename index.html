@@ -5,34 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dojo Nutrition</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="dojo.css">
 
 <style>
-body { background:#222; color:#fff; font-family: sans-serif; }
+body { font-family: sans-serif; }
 </style>
 </head>
 
-<body class="p-6">
+<body class="dojo-bg">
 
-<div class="bg-stone-100 text-black max-w-md mx-auto p-6 rounded-xl shadow">
+<div class="paper-stone max-w-md mx-auto p-6 rounded-xl shadow mt-8">
 
-<h1 class="text-3xl font-bold text-center mb-6">Nutrition</h1>
+<h1 class="hand-font text-3xl burned-text text-center mb-6">Nutrition Search</h1>
 
 <!-- Search -->
-<input id="searchInput" class="w-full border rounded p-3 text-lg"
-placeholder="Search ingredient..."
+<input id="searchInput" class="fluid-input w-full rounded p-3 text-lg"
+placeholder="Search ingredient (e.g., salmon)..."
 autocomplete="off">
 
-<div id="results" class="bg-white text-black rounded mt-1 hidden"></div>
+<div id="results" class="bg-white text-black rounded mt-1 hidden results-list max-h-60 overflow-y-auto"></div>
+
+<div id="errorMsg" class="text-red-600 mt-2 hidden"></div>
 
 <!-- Amount -->
 <div class="flex gap-3 mt-6">
 <input id="amount" type="number" value="100"
-class="border rounded p-3 w-1/2" />
+class="fluid-input rounded p-3 w-1/2" />
 
-<select id="unit" class="border rounded p-3 w-1/2">
+<select id="unit" class="fluid-input rounded p-3 w-1/2">
 <option value="g">grams</option>
 <option value="oz">ounces</option>
+<option value="lb">pounds</option>
 <option value="cup">cup</option>
+<option value="tbsp">tablespoon</option>
+<option value="tsp">teaspoon</option>
 </select>
 </div>
 
@@ -40,80 +46,106 @@ class="border rounded p-3 w-1/2" />
 <div id="nutrition" class="mt-8 text-lg"></div>
 </div>
 
-<script>
-// ------------------ DEMO DATA (per 100g)
-const FOOD = [
-{ name:"Salmon", calories:142, protein:19.8, carbs:0, fat:6.3 },
-{ name:"Almonds", calories:579, protein:21.2, carbs:21, fat:50 },
-{ name:"Banana", calories:89, protein:1, carbs:22, fat:0.3 },
-{ name:"Apple", calories:52, protein:0.3, carbs:14, fat:0.2 }
-];
+<div style="text-align:center;margin-top:20px;">
+  <a href="index.html" style="color: white;">Search</a> |
+  <a href="pantry.html" style="color: white;">Pantry</a> |
+  <a href="dish.html" style="color: white;">Dish</a> |
+  <a href="profile.html" style="color: white;">Profile</a> |
+  <a href="settings.html" style="color: white;">Settings</a>
+</div>
 
+<script src="logic.js"></script>
+<script>
 // DOM
 const input = document.getElementById("searchInput");
 const results = document.getElementById("results");
 const amount = document.getElementById("amount");
 const unit = document.getElementById("unit");
 const out = document.getElementById("nutrition");
+const errorMsg = document.getElementById("errorMsg");
 
-let sel = null;
+let selectedFood = null;
+let selectedNutrition = null;
 
-// search typing
-input.addEventListener("input", () => {
-const q = input.value.toLowerCase();
-if(!q) return results.classList.add("hidden");
-
-const matches = FOOD.filter(x => x.name.toLowerCase().includes(q));
-
-results.innerHTML = matches.map(x=>`<div class="p-2 hover:bg-gray-200 cursor-pointer">${x.name}</div>`).join("");
-results.classList.remove("hidden");
-
-// clicking a result
-Array.from(results.children).forEach(div => {
-div.onclick = () => selectFood(div.textContent);
-});
-});
-
-// ENTER selects first visible result
-input.addEventListener("keydown", e => {
-if(e.key === "Enter"){
-const first = results.children[0];
-if(first) selectFood(first.textContent);
-}
-});
-
-function selectFood(n){
-sel = FOOD.find(x=>x.name===n);
-input.value = n;
-results.classList.add("hidden");
-render();
+// Clear error
+function clearError() {
+  errorMsg.classList.add("hidden");
+  errorMsg.textContent = "";
 }
 
-// convert oz/cup -> g
-function toGrams(v,u){
-if(u==="g") return v*1;
-if(u==="oz") return v*28.35;
-if(u==="cup") return v*236;
-return v;
+// Show error
+function showError(msg) {
+  errorMsg.classList.remove("hidden");
+  errorMsg.textContent = msg;
 }
 
-// compute
+// Search on Enter key
+input.addEventListener("keydown", async (e) => {
+  if(e.key === "Enter"){
+    const query = input.value.trim();
+    if(!query) return;
+    
+    clearError();
+    results.innerHTML = "<div class='p-2'>Searching...</div>";
+    results.classList.remove("hidden");
+    
+    try {
+      const nutrition = await fetchNutrition(query);
+      
+      if(!nutrition) {
+        showError("No results found. Try a different ingredient.");
+        results.classList.add("hidden");
+        return;
+      }
+      
+      selectFood(nutrition.name, nutrition);
+      
+    } catch(err) {
+      console.error("Search error:", err);
+      showError("API error. Check your API key in localStorage (dojo_api_key) or try again.");
+      results.classList.add("hidden");
+    }
+  }
+});
+
+function selectFood(name, nutrition){
+  selectedFood = name;
+  selectedNutrition = nutrition;
+  input.value = name;
+  results.classList.add("hidden");
+  clearError();
+  render();
+}
+
+// Compute and display
 function render(){
-if(!sel)return;
-const g = toGrams(Number(amount.value), unit.value);
-const f = (n)=> (sel[n] * g /100).toFixed(1);
-
-out.innerHTML = `
-<div class="bg-white text-black p-4 rounded">
-<p><b>${sel.name}</b></p>
-<p>Calories: ${f('calories')}</p>
-<p>Protein: ${f('protein')} g</p>
-<p>Carbs: ${f('carbs')} g</p>
-<p>Fat: ${f('fat')} g</p>
-</div>`;
+  if(!selectedNutrition) return;
+  
+  try {
+    const grams = toGrams(Number(amount.value), unit.value);
+    const scaled = scaleNutrition(selectedNutrition, grams);
+    
+    if(!scaled) {
+      showError("Unable to calculate nutrition.");
+      return;
+    }
+    
+    out.innerHTML = `
+    <div class="bg-white text-black p-4 rounded">
+    <p><b>${selectedFood}</b></p>
+    <p>Calories: ${scaled.calories}</p>
+    <p>Protein: ${scaled.protein} g</p>
+    <p>Carbs: ${scaled.carbs} g</p>
+    <p>Fat: ${scaled.fat} g</p>
+    </div>`;
+    
+  } catch(err) {
+    console.error("Render error:", err);
+    showError("Error calculating nutrition values.");
+  }
 }
 
-// update on change
+// Update on change
 amount.oninput = render;
 unit.onchange = render;
 </script>
