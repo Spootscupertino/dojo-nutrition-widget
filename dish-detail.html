@@ -1,75 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dish Detail</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8">
+  <title>Dish</title>
+  <script src="logic.js"></script>
+  <script src="fooddata.js"></script>
 
-<style>
-  body{
-    background: radial-gradient(circle at top, #3b3b3b, #161616);
-    font-family: system-ui;
-  }
-  .glass {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.15);
-    backdrop-filter: blur(8px);
-  }
-</style>
+  <style>
+    body { font-family: system-ui; padding:20px; }
+    .btn { padding:8px 15px; background:#333; color:white; border-radius:5px; cursor:pointer; }
+  </style>
 </head>
 
-<body class="min-h-screen flex items-center justify-center p-6">
+<body>
+  <h1 id="dishName"></h1>
 
-<div class="glass text-white w-full max-w-2xl rounded-3xl p-10 shadow-2xl">
+  <h3>Ingredients</h3>
+  <div id="ingredientList"></div>
+  <br>
+  <button id="addIngredientBtn" class="btn">Add ingredient</button>
 
-  <!-- Name -->
-  <h1 id="dishName" class="text-4xl font-bold text-center mb-6"></h1>
-
-  <!-- Ingredient List -->
-  <div id="ingredientList" class="space-y-2 mb-6"></div>
-
-  <!-- Add ingredient button -->
-  <button id="addIngredientBtn"
-    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow">
-    Add Ingredient
-  </button>
-
-  <!-- Nutrition totals -->
-  <div id="nutritionTotals" class="mt-8"></div>
-
-</div>
+  <h3>Total Nutrition</h3>
+  <div id="nutritionTotals"></div>
 
 
-<!-- Logic -->
+
 <script>
+// -------------------------------------------
+// Dish Detail Logic  (working)
+// -------------------------------------------
+
 const DISHES_KEY = "dojo_dishes";
 
-// ------------------ Storage ------------------
-function getDishes(){
+// ---- basic storage helpers ----
+function getDishes() {
   const stored = localStorage.getItem(DISHES_KEY);
   return stored ? JSON.parse(stored) : [];
 }
-function saveDishes(list){
+function saveDishes(list) {
   localStorage.setItem(DISHES_KEY, JSON.stringify(list));
 }
 
-// ------------------ Find ------------------
-function getDishId(){
+// ---- find dish ----
+function getDishId() {
   return new URL(window.location.href).searchParams.get("dish");
 }
-function getDish(){
+function getDish() {
   return getDishes().find(d => d.id === getDishId());
 }
 
-// ------------------ Render ------------------
-async function render(){
+// ---- full re-render ----
+async function render() {
   const dish = getDish();
   const nameEl = document.getElementById("dishName");
   const listEl = document.getElementById("ingredientList");
   const totalsEl = document.getElementById("nutritionTotals");
 
-  if(!dish){
+  if (!dish) {
     nameEl.textContent = "Dish Not Found";
     return;
   }
@@ -78,40 +65,39 @@ async function render(){
   listEl.innerHTML = "";
   totalsEl.innerHTML = "Loading…";
 
-  if(!dish.ingredients?.length){
-    listEl.innerHTML = `<p class="opacity-60">No ingredients yet.</p>`;
+  if (!dish.ingredients?.length) {
+    listEl.innerHTML = `<p>No ingredients yet.</p>`;
     totalsEl.innerHTML = "";
     return;
   }
 
-  // ingredients UI
+  // ---------- list UI ----------
   dish.ingredients.forEach((ing, index) => {
-    const row = document.createElement("div");
-    row.className = "bg-white bg-opacity-10 p-3 rounded-lg flex justify-between items-center";
+    const div = document.createElement("div");
+    div.textContent = `${ing.name} — ${ing.amount} ${ing.unit}`;
 
-    row.innerHTML = `
-      <span>${ing.name} — ${ing.amount} ${ing.unit}</span>
-      <button class="text-red-400 text-xl font-bold hover:text-red-200">×</button>
-    `;
-
-    row.querySelector("button").onclick = () => {
-      dish.ingredients.splice(index,1);
+    const btn = document.createElement("button");
+    btn.textContent = "✖";
+    btn.style.marginLeft = "10px";
+    btn.onclick = () => {
+      dish.ingredients.splice(index, 1);
       updateDish(dish);
       render();
     };
 
-    listEl.appendChild(row);
+    div.appendChild(btn);
+    listEl.appendChild(div);
   });
 
-  // nutrition
+  // ---------- nutrition ----------
   const totals = await computeDishNutrition(dish.ingredients);
-  if(!totals){
+  if (!totals) {
     totalsEl.innerHTML = "";
     return;
   }
 
   totalsEl.innerHTML = `
-    <div class="bg-white bg-opacity-10 rounded-xl p-6 space-y-2 text-lg shadow-inner">
+    <div>
       <p><strong>Calories:</strong> ${totals.calories.toFixed(0)}</p>
       <p><strong>Protein:</strong> ${totals.protein.toFixed(1)} g</p>
       <p><strong>Carbs:</strong> ${totals.carbs.toFixed(1)} g</p>
@@ -120,58 +106,56 @@ async function render(){
   `;
 }
 
-// ------------------ Compute ------------------
-async function computeDishNutrition(ingredients){
-  let totals = {calories:0, protein:0, carbs:0, fat:0};
+// ---- nutrition summation ----
+async function computeDishNutrition(ingredients) {
+  let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-  for(const ing of ingredients){
-    try{
+  for (const ing of ingredients) {
+    try {
       const g = toGrams(ing.amount, ing.unit);
       const nut = await fetchNutrition(ing.name);
-      const s = scaleNutrition(nut,g);
-      if(!s) continue;
+      const scaled = scaleNutrition(nut, g);
+      if (!scaled) continue;
 
-      totals.calories += s.calories||0;
-      totals.protein  += s.protein||0;
-      totals.carbs    += s.carbohydrates_total_g||0;
-      totals.fat      += s.fat_total_g||0;
-    } catch{}
+      totals.calories += scaled.calories || 0;
+      totals.protein  += scaled.protein || 0;
+      totals.carbs    += scaled.carbohydrates_total_g || 0;
+      totals.fat      += scaled.fat_total_g || 0;
+
+    } catch {}
   }
   return totals;
 }
 
-// ------------------ Update ------------------
-function updateDish(updated){
-  saveDishes(getDishes().map(d => d.id===updated.id ? updated : d));
+// ---- save dish ----
+function updateDish(updated) {
+  saveDishes(getDishes().map(d => d.id === updated.id ? updated : d));
 }
 
-// ------------------ Add Ingredient ------------------
-function addIngredient(){
+// ---- add ingredient ----
+function addIngredient() {
   const dish = getDish();
-  if(!dish) return;
+  if (!dish) return;
 
   const name = prompt("Ingredient name?");
-  if(!name) return;
+  if (!name) return;
 
   const amount = prompt("Amount?");
-  if(!amount) return;
+  if (!amount) return;
 
-  const unit = prompt("Unit (g,oz,ml,etc)?") || "g";
+  const unit = prompt("Unit (g, oz, ml, etc)?") || "g";
 
-  dish.ingredients.push({name, amount, unit});
+  dish.ingredients.push({ name, amount, unit });
   updateDish(dish);
   render();
 }
 
-// ------------------ Init ------------------
-document.addEventListener("DOMContentLoaded", ()=>{
+// ---- setup ----
+document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("addIngredientBtn").onclick = addIngredient;
   render();
 });
 </script>
-
-<!-- your logic.js + fetchNutrition + toGrams need to already exist -->
-<script src="logic.js"></script>
 
 </body>
 </html>
