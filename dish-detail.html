@@ -1,37 +1,33 @@
-// -----------------------------
-// Dish Detail Logic
-// -----------------------------
+<script>
+// -------------------------------------------
+// Dish Detail Logic  (full rewrite)
+// -------------------------------------------
 
-// Same key as dish.js
 const DISHES_KEY = "dojo_dishes";
 
-// Utility
+// ---- basic storage helpers ----
 function getDishes() {
   const stored = localStorage.getItem(DISHES_KEY);
   return stored ? JSON.parse(stored) : [];
 }
-
 function saveDishes(list) {
   localStorage.setItem(DISHES_KEY, JSON.stringify(list));
 }
 
-// Read dish ID from URL
+// ---- find dish ----
 function getDishId() {
-  const url = new URL(window.location.href);
-  return url.searchParams.get("dish");
+  return new URL(window.location.href).searchParams.get("dish");
 }
-
-// Load dish object
 function getDish() {
-  const id = getDishId();
-  return getDishes().find(d => d.id === id);
+  return getDishes().find(d => d.id === getDishId());
 }
 
-// Render dish + ingredients
-function render() {
+// ---- full re-render ----
+async function render() {
   const dish = getDish();
   const nameEl = document.getElementById("dishName");
   const listEl = document.getElementById("ingredientList");
+  const totalsEl = document.getElementById("nutritionTotals");
 
   if (!dish) {
     nameEl.textContent = "Dish Not Found";
@@ -39,45 +35,80 @@ function render() {
   }
 
   nameEl.textContent = dish.name || "Unnamed Dish";
-
   listEl.innerHTML = "";
+  totalsEl.innerHTML = "Loading…";
 
-  if (!dish.ingredients || dish.ingredients.length === 0) {
+  if (!dish.ingredients?.length) {
     listEl.innerHTML = `<p>No ingredients yet.</p>`;
+    totalsEl.innerHTML = "";
     return;
   }
 
+  // ---------- list UI ----------
   dish.ingredients.forEach((ing, index) => {
     const div = document.createElement("div");
     div.className = "p-2 my-1 bg-white text-black rounded";
-
     div.textContent = `${ing.name} — ${ing.amount} ${ing.unit}`;
 
-    // optional remove button
     const btn = document.createElement("button");
     btn.textContent = "✖";
     btn.className = "ml-3 text-red-600";
-
-    btn.addEventListener("click", () => {
+    btn.onclick = () => {
       dish.ingredients.splice(index, 1);
       updateDish(dish);
       render();
-    });
+    };
 
     div.appendChild(btn);
     listEl.appendChild(div);
   });
+
+  // ---------- nutrition ----------
+  const totals = await computeDishNutrition(dish.ingredients);
+
+  if (!totals) {
+    totalsEl.innerHTML = "";
+    return;
+  }
+
+  totalsEl.innerHTML = `
+    <div class="mt-4 bg-white text-black p-3 rounded hand-font">
+      <p><strong>Calories:</strong> ${totals.calories.toFixed(0)}</p>
+      <p><strong>Protein:</strong> ${totals.protein.toFixed(1)} g</p>
+      <p><strong>Carbs:</strong> ${totals.carbs.toFixed(1)} g</p>
+      <p><strong>Fat:</strong> ${totals.fat.toFixed(1)} g</p>
+    </div>
+  `;
 }
 
-// Save updates
+// ---- nutrition summation ----
+async function computeDishNutrition(ingredients) {
+  let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+  for (const ing of ingredients) {
+    try {
+      const g = toGrams(ing.amount, ing.unit);
+      const nut = await fetchNutrition(ing.name);
+      const scaled = scaleNutrition(nut, g);
+      if (!scaled) continue;
+
+      totals.calories += scaled.calories || 0;
+      totals.protein  += scaled.protein || 0;
+      totals.carbs    += scaled.carbohydrates_total_g || 0;
+      totals.fat      += scaled.fat_total_g || 0;
+
+    } catch {}
+  }
+
+  return totals;
+}
+
+// ---- save dish ----
 function updateDish(updated) {
-  const dishes = getDishes().map(d =>
-    d.id === updated.id ? updated : d
-  );
-  saveDishes(dishes);
+  saveDishes(getDishes().map(d => d.id === updated.id ? updated : d));
 }
 
-// Add ingredient
+// ---- add ingredient ----
 function addIngredient() {
   const dish = getDish();
   if (!dish) return;
@@ -88,17 +119,16 @@ function addIngredient() {
   const amount = prompt("Amount?");
   if (!amount) return;
 
-  const unit = prompt("Unit (g, oz, ml, etc)?") || "";
+  const unit = prompt("Unit (g, oz, ml, etc)?") || "g";
 
   dish.ingredients.push({ name, amount, unit });
   updateDish(dish);
   render();
 }
 
-// Setup
+// ---- setup ----
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("addIngredientBtn")
-    .addEventListener("click", addIngredient);
-
+  document.getElementById("addIngredientBtn").onclick = addIngredient;
   render();
 });
+</script>
