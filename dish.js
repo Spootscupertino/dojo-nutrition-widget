@@ -22,23 +22,22 @@ function renderList() {
 
   if (dishes.length === 0) {
     container.innerHTML = `<p class="mt-4 text-white">No dishes yet.</p>`;
-    return;
-  }
+  } else {
+    dishes.forEach(dish => {
+      const div = document.createElement("div");
 
-  dishes.forEach(dish => {
-    const div = document.createElement("div");
+      div.className =
+        "p-3 my-2 bg-white rounded shadow cursor-pointer hand-font text-xl";
 
-    div.className =
-      "p-3 my-2 bg-white rounded shadow cursor-pointer hand-font text-xl";
+      div.textContent = dish.name || "Unnamed Dish";
 
-    div.textContent = dish.name || "Unnamed Dish";
+      div.addEventListener("click", () => {
+        window.location.href = `dish-detail.html?dish=${encodeURIComponent(dish.id)}`;
+      });
 
-    div.addEventListener("click", () => {
-      window.location.href = `dish-detail.html?dish=${encodeURIComponent(dish.id)}`;
+      container.appendChild(div);
     });
-
-    container.appendChild(div);
-  });
+  }
 
   const addBtn = document.createElement("button");
   addBtn.className =
