@@ -16,9 +16,14 @@ async function fetchNutrition(query) {
     headers: { "X-Api-Key": API_KEY },
   });
 
-  if (!res.ok) throw new Error("Nutrition API failed");
-  const data = await res.json();
-  return data[0]; // API returns array
+// Lightweight search using offline dataset
+async function searchFoods(query, limit = 6) {
+  const data = await ensureOfflineData();
+  if (!query || !Array.isArray(data)) return [];
+  const q = query.toLowerCase();
+  return data
+    .filter(f => f.name.toLowerCase().includes(q))
+    .slice(0, limit);
 }
 
 // -----------------------------
@@ -50,6 +55,10 @@ function scaleNutrition(nutrition, grams) {
   const factor = grams / 100;
 
   return {
+    calories: (nutrition.calories || 0) * factor,
+    protein_g: (nutrition.protein_g || 0) * factor,
+    carbohydrates_total_g: (nutrition.carbohydrates_total_g || 0) * factor,
+    fat_total_g: (nutrition.fat_total_g || 0) * factor,
     calories:  (nutrition.calories  * factor).toFixed(1),
     protein:   (nutrition.protein   * factor).toFixed(1),
     carbs:     (nutrition.carbohydrates_total_g * factor).toFixed(1),

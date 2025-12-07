@@ -112,17 +112,23 @@ async function computeDishNutrition(ingredients) {
 
   for (const ing of ingredients) {
     try {
-      const g = toGrams(ing.amount, ing.unit);
-      const nut = await fetchNutrition(ing.name);
-      const scaled = scaleNutrition(nut, g);
+      const grams = toGrams(ing.amount, ing.unit);
+      if (!Number.isFinite(grams)) continue;
+
+      const nutrition = await fetchNutrition(ing.name);
+      if (!nutrition || nutrition.error) continue;
+
+      const scaled = scaleNutrition(nutrition, grams);
       if (!scaled) continue;
 
       totals.calories += scaled.calories || 0;
-      totals.protein  += scaled.protein || 0;
+      totals.protein  += scaled.protein_g || 0;
       totals.carbs    += scaled.carbohydrates_total_g || 0;
       totals.fat      += scaled.fat_total_g || 0;
 
-    } catch {}
+    } catch (err) {
+      console.warn("Failed to compute ingredient", ing, err);
+    }
   }
   return totals;
 }
