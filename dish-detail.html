@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dish Detail</title>
+  <link rel="stylesheet" href="dojo.css" />
+</head>
+
+<body class="dojo-bg">
+
+  <div class="paper-stone rounded-xl p-6 max-w-md mx-auto mt-8">
+    <h1 id="dishName" class="hand-font text-3xl burned-text">
+      Loading Dish...
+    </h1>
+
+    <button id="addIngredientBtn" 
+      class="mt-4 bg-white px-4 py-2 rounded shadow hand-font">
+      ➕ Add Ingredient
+    </button>
+
+    <div id="ingredientList" class="mt-6 text-white">
+      <!-- ingredients will be injected here -->
+    </div>
+
+    <div id="nutritionTotals" class="mt-8 text-white">
+      <!-- future totals placeholder -->
+      <p>Nutrition totals coming soon...</p>
+    </div>
+  </div>
+
+  <script src="dish-detail.js"></script>
+
+  <div style="text-align:center;margin-top:20px;">
+    <a href="index.html">Search</a> |
+    <a href="pantry.html">Pantry</a> |
+    <a href="dish.html">Dish</a> |
+    <a href="profile.html">Profile</a> |
+    <a href="settings.html">Settings</a>
+  </div>
+
+</body>
+</html>
 
