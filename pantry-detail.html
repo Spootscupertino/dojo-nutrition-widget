@@ -1,1 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pantry Item</title>
+
+  <link rel="stylesheet" href="dojo.css" />
+</head>
+
+<body class="dojo-bg">
+
+  <div class="paper-stone rounded-xl p-6 max-w-md mx-auto mt-8">
+
+    <h1 id="itemName" class="hand-font text-3xl burned-text">
+      Pantry Item
+    </h1>
+
+    <div id="details" class="mt-3 text-white"></div>
+
+    <button id="deleteBtn"
+      class="mt-4 bg-red-600 text-white px-4 py-2 rounded shadow block mx-auto">
+      Remove Item
+    </button>
+
+    <button id="editBtn"
+      class="mt-4 bg-white px-4 py-2 rounded shadow block mx-auto hand-font">
+      Edit Item
+    </button>
+
+  </div>
+
+  <script>
+    const PANTRY_KEY = "dojo_pantry";
+
+    function getPantry() {
+      const stored = localStorage.getItem(PANTRY_KEY);
+      return stored ? JSON.parse(stored) : [];
+    }
+
+    function savePantry(list) {
+      localStorage.setItem(PANTRY_KEY, JSON.stringify(list));
+    }
+
+    function getId() {
+      const url = new URL(window.location.href);
+      return url.searchParams.get("id");
+    }
+
+    function getItem() {
+      return getPantry().find(i => i.id === getId());
+    }
+
+    function render() {
+      const item = getItem();
+      const nameEl = document.getElementById("itemName");
+      const detailsEl = document.getElementById("details");
+
+      if (!item) {
+        nameEl.textContent = "Item Not Found";
+        return;
+      }
+
+      nameEl.textContent = item.name;
+      detailsEl.innerHTML = `
+        <p>Amount: ${item.amount}</p>
+        <p>Unit: ${item.unit}</p>
+      `;
+    }
+
+    function removeItem() {
+      const items = getPantry().filter(i => i.id !== getId());
+      savePantry(items);
+      window.location.href = "pantry.html";
+    }
+
+    function editItem() {
+      const item = getItem();
+      if (!item) return;
+
+      const name = prompt("Name", item.name);
+      if (!name) return;
+
+      const amount = prompt("Amount", item.amount);
+      if (!amount) return;
+
+      const unit = prompt("Unit", item.unit);
+
+      const updated = { ...item, name, amount, unit };
+
+      const updatedList = getPantry().map(i =>
+        i.id === item.id ? updated : i
+      );
+
+      savePantry(updatedList);
+      render();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("deleteBtn").addEventListener("click", removeItem);
+      document.getElementById("editBtn").addEventListener("click", editItem);
+
+      render();
+    });
+  </script>
+
+  <div style="text-align:center;margin-top:20px;">
+    <a href="index.html">Search</a> |
+    <a href="pantry.html">Pantry</a> |
+    <a href="dish.html">Dish</a> |
+    <a href="profile.html">Profile</a> |
+    <a href="settings.html">Settings</a>
+  </div>
+
+</body>
+</html>
 
