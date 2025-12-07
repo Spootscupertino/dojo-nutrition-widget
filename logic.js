@@ -2,19 +2,18 @@
 // Dojo Global Logic
 // -----------------------------
 
-// nutrition endpoint (the one your index.html hits)
+// nutrition endpoint
 const API_URL = "https://api.api-ninjas.com/v1/nutrition?query=";
 
-// API KEY is already handled in index.html fetch headers.
-// We're just factoring logic here so multiple pages can reuse it.
+// 🔥 hard-coded API KEY
+const API_KEY = "4UJbz31NSzJfjYDaoZrQoA==3TxTMrMleysCSEAp";
 
+// -----------------------------
+// FETCH NUTRITION
+// -----------------------------
 async function fetchNutrition(query) {
-  const key = localStorage.getItem("dojo_api_key");  // optional future setting
-
   const res = await fetch(API_URL + encodeURIComponent(query), {
-    headers: key
-      ? { "X-Api-Key": key }
-      : { },
+    headers: { "X-Api-Key": API_KEY },
   });
 
   if (!res.ok) throw new Error("Nutrition API failed");
@@ -23,11 +22,11 @@ async function fetchNutrition(query) {
 }
 
 // -----------------------------
-// UNIT CONVERSION
+// CONVERT UNITS TO GRAMS
 // -----------------------------
-
-// g = exact, oz/lb approximate, cups/tbsp vary by ingredient.
-// We default approximate but allow overrides later.
+// g exact
+// oz/lb approximate
+// cup/tbsp/tsp vary by ingredient
 function toGrams(amount, unit) {
   const n = parseFloat(amount);
 
@@ -38,14 +37,12 @@ function toGrams(amount, unit) {
     case "cup": return n * 240;   // generic density
     case "tbsp": return n * 15;
     case "tsp": return n * 5;
-    default: return n; // assume already grams
+    default: return n;
   }
 }
 
 // -----------------------------
-// MACRO SCALING
-// nutrition API returns values per 100g
-// we scale using grams
+// SCALE PER 100G → YOUR AMOUNT
 // -----------------------------
 function scaleNutrition(nutrition, grams) {
   if (!nutrition) return null;
@@ -53,5 +50,16 @@ function scaleNutrition(nutrition, grams) {
   const factor = grams / 100;
 
   return {
-    calories: (nutrition.c
+    calories:  (nutrition.calories  * factor).toFixed(1),
+    protein:   (nutrition.protein   * factor).toFixed(1),
+    carbs:     (nutrition.carbohydrates_total_g * factor).toFixed(1),
+    fat:       (nutrition.fat_total_g * factor).toFixed(1),
+  };
+}
 
+// export for other pages
+window.DojoNutrition = {
+  fetchNutrition,
+  toGrams,
+  scaleNutrition,
+};
