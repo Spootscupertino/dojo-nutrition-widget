@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Dojo Nutrition</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="dojo.css">
@@ -19,11 +22,14 @@ body { font-family: sans-serif; }
 <h1 class="hand-font text-3xl burned-text text-center mb-6">Nutrition Search</h1>
 
 <!-- Search -->
-<input id="searchInput" class="fluid-input w-full rounded p-3 text-lg"
-placeholder="Search ingredient (e.g., salmon)..."
-autocomplete="off">
+<div style="position:relative;">
+  <div id="ghostSuggestion" aria-hidden="true" style="position:absolute;left:0;top:0;padding:12px 12px;font-size:18px;color:#9ca3af;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"></div>
+  <input id="searchInput" class="fluid-input w-full rounded p-3 text-lg" style="position:relative; background:transparent;"
+  placeholder="Search ingredient (e.g., salmon)..."
+  autocomplete="off">
+</div>
 
-<div id="results" class="bg-white text-black rounded mt-1 hidden results-list max-h-60 overflow-y-auto"></div>
+<div id="results" class="bg-white text-black rounded mt-1 hidden results-list max-h-60 overflow-y-auto shadow border border-gray-200" style="position:absolute; z-index:20; width: calc(100% - 3rem);"></div>
 
 <div id="errorMsg" class="text-red-600 mt-2 hidden"></div>
 
@@ -56,6 +62,15 @@ class="fluid-input rounded p-3 w-1/2" />
 
 <script src="logic.js"></script>
 <script>
+// Force refresh when returning via back/forward cache so we always show the latest page
+window.addEventListener("pageshow", (event) => {
+  const nav = performance.getEntriesByType("navigation")[0];
+  if ((event.persisted || nav?.type === "back_forward") && !sessionStorage.getItem("dojo_index_refreshed")) {
+    sessionStorage.setItem("dojo_index_refreshed", "1");
+    window.location.reload();
+  }
+});
+
 // DOM
 const input = document.getElementById("searchInput");
 const results = document.getElementById("results");
@@ -63,9 +78,68 @@ const amount = document.getElementById("amount");
 const unit = document.getElementById("unit");
 const out = document.getElementById("nutrition");
 const errorMsg = document.getElementById("errorMsg");
+const ghost = document.getElementById("ghostSuggestion");
 
 let selectedFood = null;
 let selectedNutrition = null;
+let searchTimer = null;
+// Predictive search on input
+input.addEventListener("input", () => {
+  const query = input.value.trim();
+  if (!query || query.length < 3) {
+    results.classList.add("hidden");
+    results.innerHTML = "";
+    if (ghost) ghost.textContent = "";
+    return;
+  }
+
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => typeahead(query), 200);
+});
+
+async function typeahead(query){
+  try {
+    const foods = await searchFoods(query, 6);
+    if (!foods.length) {
+      results.classList.add("hidden");
+      results.innerHTML = "";
+      if (ghost) ghost.textContent = "";
+      return;
+    }
+
+    results.innerHTML = foods.map((f, idx) => `
+      <div class="p-2 hover:bg-gray-200 cursor-pointer" data-idx="${idx}">
+        ${f.name}
+      </div>
+    `).join("");
+    results.classList.remove("hidden");
+
+    // Inline ghost suggestion uses the first result completion
+    const first = foods[0];
+    if (ghost && first?.name) {
+      const lowerQ = query.toLowerCase();
+      const lowerName = first.name.toLowerCase();
+      if (lowerName.startsWith(lowerQ)) {
+        ghost.textContent = query + first.name.slice(query.length);
+      } else {
+        ghost.textContent = first.name;
+      }
+    }
+
+    Array.from(results.children).forEach((child, idx) => {
+      child.addEventListener("click", async () => {
+        try {
+          const fresh = await fetchNutrition(foods[idx].name);
+          selectFood(foods[idx].name, fresh || foods[idx]);
+        } catch {
+          selectFood(foods[idx].name, foods[idx]);
+        }
+      });
+    });
+  } catch (e) {
+    // silent for typeahead
+  }
+}
 
 // Clear error
 function clearError() {
@@ -91,18 +165,19 @@ input.addEventListener("keydown", async (e) => {
     
     try {
       const nutrition = await fetchNutrition(query);
-      
+      if (ghost) ghost.textContent = "";
+
       if(!nutrition) {
         showError("No results found. Try a different ingredient.");
         results.classList.add("hidden");
         return;
       }
-      
+
       selectFood(nutrition.name, nutrition);
-      
+
     } catch(err) {
       console.error("Search error:", err);
-      showError("API error. Check your API key in localStorage (dojo_api_key) or try again.");
+      showError("Search failed. Try another term.");
       results.classList.add("hidden");
     }
   }
@@ -133,10 +208,10 @@ function render(){
     out.innerHTML = `
     <div class="bg-white text-black p-4 rounded">
     <p><b>${selectedFood}</b></p>
-    <p>Calories: ${scaled.calories}</p>
-    <p>Protein: ${scaled.protein} g</p>
-    <p>Carbs: ${scaled.carbs} g</p>
-    <p>Fat: ${scaled.fat} g</p>
+    <p>Calories: ${scaled.calories.toFixed(1)}</p>
+    <p>Protein: ${scaled.protein_g.toFixed(1)} g</p>
+    <p>Carbs: ${scaled.carbohydrates_total_g.toFixed(1)} g</p>
+    <p>Fat: ${scaled.fat_total_g.toFixed(1)} g</p>
     </div>`;
     
   } catch(err) {

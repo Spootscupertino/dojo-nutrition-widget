@@ -2,24 +2,54 @@
 // Dojo Global Logic
 // -----------------------------
 
-// nutrition endpoint (the one your index.html hits)
-const API_URL = "https://api.api-ninjas.com/v1/nutrition?query=";
+// Offline dataset loader
+let OFFLINE_CACHE = (typeof OFFLINE_NUTRITION !== "undefined" && Array.isArray(OFFLINE_NUTRITION))
+  ? OFFLINE_NUTRITION
+  : null;
 
-// API KEY is already handled in index.html fetch headers.
-// We're just factoring logic here so multiple pages can reuse it.
+async function ensureOfflineData() {
+  if (OFFLINE_CACHE) return OFFLINE_CACHE;
+  if (typeof OFFLINE_NUTRITION !== "undefined" && Array.isArray(OFFLINE_NUTRITION)) {
+    OFFLINE_CACHE = OFFLINE_NUTRITION;
+    return OFFLINE_CACHE;
+  }
+  try {
+    const res = await fetch("data/offline_nutrition.json");
+    if (res.ok) {
+      OFFLINE_CACHE = await res.json();
+      return OFFLINE_CACHE;
+    }
+  } catch {}
+  OFFLINE_CACHE = [];
+  return OFFLINE_CACHE;
+}
 
+function findOfflineFood(query, data) {
+  if (!query || !Array.isArray(data)) return null;
+  const q = query.toLowerCase();
+  const exact = data.find(f => f.name.toLowerCase() === q);
+  if (exact) return exact;
+  return data.find(f => f.name.toLowerCase().includes(q)) || null;
+}
+
+// Fetch nutrition data (offline)
 async function fetchNutrition(query) {
-  const key = localStorage.getItem("dojo_api_key");  // optional future setting
+  const data = await ensureOfflineData();
+  const match = findOfflineFood(query, data);
+  if (!match) {
+    return { error: 'No matching food found offline' };
+  }
+  return match;
+}
 
-  const res = await fetch(API_URL + encodeURIComponent(query), {
-    headers: key
-      ? { "X-Api-Key": key }
-      : { },
-  });
-
-  if (!res.ok) throw new Error("Nutrition API failed");
-  const data = await res.json();
-  return data[0]; // API returns array
+// Lightweight search using offline dataset
+async function searchFoods(query, limit = 6) {
+  const data = await ensureOfflineData();
+  if (!query || !Array.isArray(data)) return [];
+  const q = query.toLowerCase();
+  return data
+    .filter(f => f.name.toLowerCase().includes(q))
+    .slice(0, limit);
 }
 
 // -----------------------------
@@ -53,10 +83,10 @@ function scaleNutrition(nutrition, grams) {
   const factor = grams / 100;
 
   return {
-    calories: ((nutrition.calories || 0) * factor).toFixed(1),
-    protein: ((nutrition.protein_g || 0) * factor).toFixed(1),
-    carbs: ((nutrition.carbohydrates_total_g || 0) * factor).toFixed(1),
-    fat: ((nutrition.fat_total_g || 0) * factor).toFixed(1)
+    calories: (nutrition.calories || 0) * factor,
+    protein_g: (nutrition.protein_g || 0) * factor,
+    carbohydrates_total_g: (nutrition.carbohydrates_total_g || 0) * factor,
+    fat_total_g: (nutrition.fat_total_g || 0) * factor,
   };
 }
 

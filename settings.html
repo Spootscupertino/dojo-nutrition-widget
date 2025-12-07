@@ -18,10 +18,22 @@
       Adjust your app preferences.
     </p>
 
-    <div class="mt-4 text-white hand-font">
-      <p><strong>Theme:</strong> (coming soon)</p>
-      <p><strong>Units:</strong> (coming soon)</p>
-      <p><strong>Notifications:</strong> (coming soon)</p>
+    <div class="mt-4 text-white hand-font space-y-4">
+      <div>
+        <p class="burned-text text-xl">USDA API Key</p>
+        <p class="text-sm mt-1">Store your FoodData Central key for ingredient lookups.</p>
+        <div id="keyStatus" class="text-sm mt-2"></div>
+        <input id="usdaKey" class="mt-2 w-full p-2 rounded" placeholder="Enter your USDA API key" />
+        <button id="saveUsdaKey" class="mt-3 bg-white text-black px-4 py-2 rounded shadow">Save Key</button>
+        <button id="testUsdaKey" class="mt-2 bg-white text-black px-4 py-2 rounded shadow">Test Key with "apple"</button>
+        <div id="saveStatus" class="text-sm mt-2"></div>
+      </div>
+
+      <div>
+        <p><strong>Theme:</strong> (coming soon)</p>
+        <p><strong>Units:</strong> (coming soon)</p>
+        <p><strong>Notifications:</strong> (coming soon)</p>
+      </div>
     </div>
 
   </div>
@@ -33,6 +45,75 @@
     <a href="profile.html">Profile</a> |
     <a href="settings.html">Settings</a>
   </div>
+
+  <script>
+    // USDA API key helper UI
+    const keyInput = document.getElementById("usdaKey");
+    const statusEl = document.getElementById("saveStatus");
+    const keyStatus = document.getElementById("keyStatus");
+    const saveBtn = document.getElementById("saveUsdaKey");
+    const testBtn = document.getElementById("testUsdaKey");
+
+    const existing = localStorage.getItem("dojo_usda_api_key") || localStorage.getItem("dojo_api_key") || "";
+    keyInput.value = existing;
+    updateKeyStatus(existing);
+
+    saveBtn.addEventListener("click", () => {
+      const value = keyInput.value.trim();
+      if (!value) {
+        statusEl.textContent = "Please enter a key.";
+        statusEl.style.color = "#f87171"; // red-400
+        return;
+      }
+
+      localStorage.setItem("dojo_usda_api_key", value);
+      // Also write legacy key for compatibility.
+      localStorage.setItem("dojo_api_key", value);
+
+      statusEl.textContent = "Key saved. You can search now.";
+      statusEl.style.color = "#34d399"; // green-400
+      updateKeyStatus(value);
+    });
+
+    function updateKeyStatus(value) {
+      if (!value) {
+        keyStatus.textContent = "No key stored yet.";
+        keyStatus.style.color = "#fbbf24"; // amber-300
+        return;
+      }
+      const masked = value.length > 6
+        ? `${value.slice(0, 3)}…${value.slice(-3)}`
+        : value;
+      keyStatus.textContent = `Key detected: ${masked}`;
+      keyStatus.style.color = "#34d399"; // green-400
+    }
+
+    async function testKey() {
+      statusEl.textContent = "Testing with \"apple\"...";
+      statusEl.style.color = "#60a5fa"; // blue-400
+
+      const key = localStorage.getItem("dojo_usda_api_key") || localStorage.getItem("dojo_api_key");
+      if (!key) {
+        statusEl.textContent = "No key saved. Please save your key first.";
+        statusEl.style.color = "#f87171"; // red-400
+        return;
+      }
+
+      try {
+        const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=apple&pageSize=1&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&api_key=${encodeURIComponent(key)}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        if (!res.ok) throw new Error(`${res.status} ${text}`);
+        statusEl.textContent = "Test succeeded. You can search now.";
+        statusEl.style.color = "#34d399"; // green-400
+      } catch (err) {
+        statusEl.textContent = `Test failed: ${err.message}`;
+        statusEl.style.color = "#f87171"; // red-400
+      }
+    }
+
+    testBtn.addEventListener("click", testKey);
+  </script>
 
 </body>
 </html>

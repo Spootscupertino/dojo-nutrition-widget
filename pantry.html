@@ -13,6 +13,22 @@
     <h1 class="hand-font text-3xl burned-text">Pantry</h1>
     <p class="text-white mt-2">Your saved ingredients.</p>
 
+    <div class="mt-4 flex gap-2 items-end">
+      <div class="flex-1">
+        <label class="text-white text-sm">Name</label>
+        <input id="pantryName" class="w-full p-2 rounded" placeholder="e.g., Chicken breast" />
+      </div>
+      <div class="w-24">
+        <label class="text-white text-sm">Amount</label>
+        <input id="pantryAmount" class="w-full p-2 rounded" placeholder="100" />
+      </div>
+      <div class="w-28">
+        <label class="text-white text-sm">Unit</label>
+        <input id="pantryUnit" class="w-full p-2 rounded" placeholder="g" />
+      </div>
+      <button id="addPantryBtn" class="bg-white px-4 py-2 rounded shadow hand-font">Add</button>
+    </div>
+
     <div id="pantryList" class="mt-4"></div>
   </div>
 
@@ -24,6 +40,42 @@
     <a href="dish.html">Dish</a> |
     <a href="profile.html">Profile</a> |
     <a href="settings.html">Settings</a>
+  </div>
+
+  <!-- Floating quick-add button for visibility -->
+  <button id="addPantryFab" aria-label="Add ingredient"
+    style="position:fixed;right:16px;bottom:16px;background:#fff;border:none;padding:12px 16px;border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-weight:bold;cursor:pointer;">
+    Add Ingredient
+  </button>
+
+  <!-- Modal add form -->
+  <div id="pantryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);z-index:50;align-items:center;justify-content:center;padding:16px;">
+    <div class="paper-stone" style="max-width:420px;width:100%;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.3);padding:24px;">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="hand-font text-2xl burned-text">Add Ingredient</h2>
+        <button id="closePantryModal" aria-label="Close" style="background:none;border:none;font-size:20px;color:#444;cursor:pointer;">✕</button>
+      </div>
+      <div class="space-y-3 text-white">
+        <div>
+          <label class="text-sm">Name</label>
+          <input id="modalPantryName" class="w-full p-3 rounded text-black" placeholder="e.g., Agave" />
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-sm">Amount</label>
+            <input id="modalPantryAmount" class="w-full p-3 rounded text-black" placeholder="100" />
+          </div>
+          <div class="w-32">
+            <label class="text-sm">Unit</label>
+            <input id="modalPantryUnit" class="w-full p-3 rounded text-black" placeholder="g" />
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="cancelPantryModal" class="px-4 py-2 rounded" style="background:#e5e7eb;color:#111;">Cancel</button>
+        <button id="savePantryModal" class="px-4 py-2 rounded" style="background:#111;color:#fff;">Save</button>
+      </div>
+    </div>
   </div>
 
 </body>
