@@ -15,6 +15,9 @@ async function fetchNutrition(query) {
   const res = await fetch(API_URL + encodeURIComponent(query), {
     headers: { "X-Api-Key": API_KEY },
   });
+  const json = await res.json();
+  return json[0]; // first food result
+}
 
 // Lightweight search using offline dataset
 async function searchFoods(query, limit = 6) {
