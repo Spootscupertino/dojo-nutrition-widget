@@ -442,7 +442,76 @@
         }
     </script>
     <script src="fooddata.js"></script>
-<script src="logic.js"></script>
+<script src="logic.js"></script><script>
+// -------------------------------------------
+// Nutrition Display for selected item
+// -------------------------------------------
+
+// attach output area
+const nutritionOutput = document.createElement("div");
+nutritionOutput.id = "nutritionOutput";
+nutritionOutput.className = "mt-8 text-white hand-font text-2xl";
+document.querySelector(".paper-stone").appendChild(nutritionOutput);
+
+// store selected item
+let selectedFood = null;
+
+function setSelectedFood(food) {
+  selectedFood = food;
+  computeAndRender();
+}
+
+// compute using logic.js
+async function computeAndRender() {
+  if (!selectedFood) {
+    nutritionOutput.innerHTML = "";
+    return;
+  }
+  const grams = toGrams(weightInput.value || 0, unitSelect.value);
+  const nut = await fetchNutrition(selectedFood.name);
+  const scaled = scaleNutrition(nut, grams);
+
+  if (!scaled) {
+    nutritionOutput.innerHTML = "";
+    return;
+  }
+
+  nutritionOutput.innerHTML = `
+    <div class="bg-white bg-opacity-70 text-black p-6 rounded-3xl mt-4 hand-font text-3xl">
+      <p><strong>Calories:</strong> ${scaled.calories.toFixed(0)}</p>
+      <p><strong>Protein:</strong> ${scaled.protein.toFixed(1)} g</p>
+      <p><strong>Carbs:</strong> ${scaled.carbohydrates_total_g.toFixed(1)} g</p>
+      <p><strong>Fat:</strong> ${scaled.fat_total_g.toFixed(1)} g</p>
+    </div>
+  `;
+}
+
+// choose item from results
+function hookResultClicks() {
+  // re-wire resultsList children
+  Array.from(resultsList.children).forEach((child) => {
+    child.onclick = () => {
+      searchInput.value = child.textContent;
+      selectedFood = uniqueFoodData.find(f => f.name === child.textContent);
+      resultsList.classList.add("hidden");
+      computeAndRender();
+    };
+  });
+}
+
+// patch existing renderResults
+const originalRenderResults = renderResults;
+renderResults = function(matches) {
+  originalRenderResults(matches);
+  hookResultClicks();
+};
+
+// weight or unit change recalculates
+weightInput.onchange = computeAndRender;
+unitSelect.onchange = computeAndRender;
+
+</script>
+
 </body>
 </html>
 
