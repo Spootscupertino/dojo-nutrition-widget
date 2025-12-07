@@ -24,23 +24,22 @@ function renderPantry() {
 
   if (items.length === 0) {
     container.innerHTML = `<p class="mt-4 text-white">Your pantry is empty.</p>`;
-    return;
-  }
+  } else {
+    items.forEach(item => {
+      const div = document.createElement("div");
 
-  items.forEach(item => {
-    const div = document.createElement("div");
+      div.className =
+        "p-3 my-2 bg-white rounded shadow cursor-pointer hand-font text-xl";
 
-    div.className =
-      "p-3 my-2 bg-white rounded shadow cursor-pointer hand-font text-xl";
+      div.textContent = `${item.name}  (${item.amount} ${item.unit})`;
 
-    div.textContent = `${item.name}  (${item.amount} ${item.unit})`;
+      div.addEventListener("click", () => {
+        window.location.href = `pantry-detail.html?id=${encodeURIComponent(item.id)}`;
+      });
 
-    div.addEventListener("click", () => {
-      window.location.href = `pantry-detail.html?id=${encodeURIComponent(item.id)}`;
+      container.appendChild(div);
     });
-
-    container.appendChild(div);
-  });
+  }
 
   const addBtn = document.createElement("button");
   addBtn.className =
